@@ -1,0 +1,63 @@
+nrow(GT)-nrow(f1)
+
+f=head(GT,20)
+
+f1 =GT %>% mutate_at(vars(c(B1,B2,B3)), ~replace(., is.nan(.), 0)) %>% 
+  filter_at(vars(c(B1,B2,B3)),all_vars(.==0))
+
+f2=GT %>% group_by(mission_id) %>% 
+  mutate(start_counter=ifelse(action=="missionStarted",1,0)) %>% 
+  summarise(n=sum(start_counter)) %>% 
+  filter(n != 1)
+
+f3= GT %>% group_by(mission_id) %>% 
+  mutate(m_comp=ifelse(action=="missionCompleted",1,0),
+         m_fail=ifelse(action=="missionFailed",1,0),
+         m_abandoned=ifelse(action=="missionFailed",1,0),
+         m_start=ifelse(action=="missionStarted",1,0),
+         diff=sum(m_start)-(sum(m_comp)+sum(m_fail)+sum(m_abandoned))) %>% 
+  filter(diff < 0)
+
+f4= GT %>% group_by(mission_id) %>% 
+  mutate(m_cont=ifelse(action=="useContinue",1,0),
+         check=sum(m_cont),
+         m_start=ifelse(action=="missionStarted",1,0),
+         m_comp=ifelse(action=="missionCompleted",1,0),
+         m_fail=ifelse(action=="missionFailed",1,0),
+         check_comp=sum(m_comp)-m_comp,
+         check_fail=sum(m_fail),
+         excess_comp=ifelse(check==1 & check_comp == 0 & sum(m_comp),1,0),
+         excess_fail=ifelse(check==1 & check_fail == 2 & m_fail == 1,0.5,0)) %>% 
+  select(-c(m_cont,check,m_start,m_comp,m_fail,check_comp,check_fail))
+
+summary(f4)
+
+  
+
+
+E1= GT %>% replace_na(list(B1=0,B2=0,B3=0)) %>% ##no queremos quitar los useContinue ya que nos sirven para identificar las partidas
+    filter_at(vars(c(B1,B2,B3)),all_vars(.==0)) %>%  ###Cumplimos con la condicion 5, se eliminan 3232 registros
+    group_by(mission_id) %>% 
+    mutate(start_counter=ifelse(action=="missionStarted",1,0),
+           n_starts=sum(start_counter)) %>% 
+    filter(n_starts == 1) %>% 
+    select(-c(start_counter,n_starts)) %>%    ###Cumplimos con la condicion 4. Se eliminan 5 registros
+    mutate(m_cont=ifelse(action=="useContinue",1,0),  ##Cumplimos con la condicion 6
+           check=sum(m_cont),
+           m_start=ifelse(action=="missionStarted",1,0),
+           m_comp=ifelse(action=="missionCompleted",1,0),
+           m_fail=ifelse(action=="missionFailed",1,0),
+           check_comp=sum(m_comp)-m_comp,
+           check_fail=sum(m_fail),
+           excess_comp=ifelse(check==1 & check_comp == 0 & sum(m_comp),1,0), ##Usamos un algoritmo para señalar los complete y los fail tras continues
+           excess_fail=ifelse(check==1 & check_fail == 2 & m_fail == 1,0.5,0)) %>% ##Los fail se cuentan a la mitad ya que este algoritmo nos cuenta ambos fails, y realmente solo tenemos que despreciar el úlimo
+    select(-c(m_cont,check,m_start,m_comp,m_fail,check_comp,check_fail)) %>% 
+    group_by(level_id) %>% 
+  
+    mutate(fail=ifelse(action=="missionFailed",1,0),
+           comp=ifelse(action=="missionCompleted",1,0),
+           comp_exc=excess_comp,
+           fail_exc=excess_fail,
+           comp_total=comp-comp_exc,
+           fail_total=fail-fail_exc) %>% 
+    summarise(DIFF = sum(comp_total)/(sum(comp_total)+sum(fail_total)))

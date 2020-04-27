@@ -1,0 +1,633 @@
+---
+title: "VIDEO GAMES"
+author: "Tatán Rufino"
+date: "12/8/2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+library(readr)        #Para leer e importar datos
+library(dplyr)        #Análisis exploratorio
+library(ggplot2)      #Visualizaciones
+library(tidyverse)    #Utilizada para ordenar dataset
+library(gsheet)       #Leer google sheets
+library(readxl)       
+library(knitr)        #Varios propósito
+library(DT)           #libreria DataTables
+library(caret)        #Variables para Correlation Matrix
+library(grid)         #Plotear
+library(gridExtra)    #Plotear
+library(corrr)        #Var estadisticas
+library(ggpubr)
+library(qcc)
+library(data.table)
+library(janitor)
+library(arules)
+library(arulesViz)
+library(lubridate)
+library(stats)
+library(samplingbook)
+library(rmarkdown)
+
+tdt <- function(inpdt){
+        transposed <- t(inpdt[,-1,with=F]);
+        colnames(transposed) <- inpdt[[1]];
+        transposed <- data.table(transposed, keep.rownames=T);
+        setnames(transposed, 1, names(inpdt)[1]);
+        return(transposed);
+}
+
+
+####Apertura de archivos
+
+DT <- read.csv("event_levels.csv")
+kable(head(DT))
+
+```
+
+##################################
+##########DATA ANALYSIS###########
+##################################
+
+
+Calculamos previamente algunos totales
+
+```{r}
+Num_Tot = as.integer(DT %>% distinct(user_id, .keep_all = TRUE) #Numero total de jugadores no duplicados
+                     %>% summarise(n=n()))
+
+Num_Totx = as.integer(DT %>% summarise(n=n())) ###Numero total de entradas
+
+Num_Sucx = as.integer(DT %>% filter(level==5,action=="action.success") #Número total de usuarios que ganan el evento sin reiteraciones
+                      %>% summarise(n=n()))
+
+Num_Suc = as.integer(DT %>% filter(level==5,action=="action.success") #Numero jugadores distintos que han superado un evento sin duplicados
+                     %>% distinct(user_id, keep_all=TRUE)
+                     %>% summarise(n=n()))
+
+Num_PowT = DT %>% filter(action=="action.use_powerup")%>% #Numero de veces que se usa un powerup
+        summarise(n=n())
+
+Num_Start = as.integer(DT %>% filter(action=="action.game_start") #Número total de usuarios que ganan el evento sin reiteraciones
+                       %>% summarise(n=n()))
+```
+################1## ¿Cuál es el porcentaje de usuarios que han completado el evento respecto de los que han participado?
+###############
+
+
+```{r}
+SOL1=(Num_Sucx/Num_Start)*100
+SOL1
+```
+Sólo 1,322% de la gente que comenzó a jugar en algún momento, ha conseguido superar el evento
+
+
+#################2## Búsqueda por niveles
+###############
+
+
+Antes vimos que sólo el 1,32% de los usuarios que comenzaron el juego, en algún momento y algunos, tras varios intentos, lo consiguieron, pero, 
+La friolera del resultado lo coloca, en un principio, en un resultado no asequible o alentador para muchos.
+
+¿Es dificil el juego? Según con qué se compare, o desde que óptica se observe, prosigamos la investigación
+
+```{r}
+S2_LEV = DT %>% group_by(level) %>% 
+        filter(action=="action.success") %>% 
+        summarise(n=n()) %>% 
+        mutate("PER"=n/sum(n)*100)
+
+kable(S2_LEV)
+```
+Aquí se puede observar que de TODAS las partidas que se han iniciado, sólo el 11% supera el 3 nivel, y sólo el 3% el 4 nivel
+
+```{r}
+ggplot(S2_LEV,aes(x=level,y=PER)) + 
+        geom_point()+ 
+        geom_line()+ 
+        geom_area(fill="lightblue")+ 
+        labs(y="%")
+
+```
+
+En el plot podemos ver como se apacigua la curva al llegar al 3 nivel y el porcentaje de éxito disminuye lentamente, es decir, se va "asintotizando": Cuestan poco los primeros niveles y conforme subimos de nivel la dificultad aumenta dejando sólo a unos pocos privilegiados ese gusto, pero aún hay que analizar el uso de los powerups.
+
+```{r}
+ggscatter(S2_LEV, x = "level", y = "PER", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson")
+
+```
+
+Sin embargo, en términos de dispersión, la R = 0,92, un buen resultado en el sentido de que existe una variabilidad descendente poco dispersa, Lo que sugiere una progresión lógica de dificultad, 
+
+
+```{r}
+S2_LEV2 = DT %>% group_by(level) %>% 
+        filter(action=="action.success") %>% 
+        distinct(user_id, keep_all=TRUE) %>% 
+        summarise(n=n()) %>% 
+        mutate("PER"=n/sum(n)*100) %>% 
+        select(level, PER)
+
+kable(S2_LEV2)
+ggplot(S2_LEV2,aes(x=level,y=PER)) + 
+        geom_point()+ 
+        geom_line()+ 
+        geom_area(fill="blue")+ 
+        labs(y="%")
+
+S2_LEV_R2 <- cor(S2_LEV2)
+
+ggscatter(S2_LEV2, x = "level", y = "PER", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson")
+
+S2_LEV_R2
+```
+
+Es curioso que cuando eliminamos los usuarios duplicados (aunque esto no es una medida muy certera), la progresión porcentual de exito a diferentes niveles es casi perfectamente decreciente
+
+Por último, antes de analizar más datos, hacemos un cálculo de probabilidades puras y condicionadas y obtenemos una matriz de probabilidades de éxito por nivel, con las probabilidades que hay de exito frente al total de iniciados en ese nivel:
+```{r}
+x=1
+
+S2_POB1 = DT %>%
+        filter(level==x) %>% 
+        filter(action=="action.game_start" | action=="action.success" ) %>%
+        group_by(action) %>% 
+        summarise(n=n())
+S2_POB1       
+names(S2_POB1)[x+1]=paste("L",x,sep="")
+
+S2_POB1$action = as.character(S2_POB1$action)
+S2_POB1[[x+1]] = as.double(S2_POB1[[x+1]])
+S2_POB1 = rbind(S2_POB1,c("%",round(as.double(S2_POB1[2,x+1]/S2_POB1[1,x+1]),2)))
+S2_POB1[[x+1]] = as.double(S2_POB1[[x+1]])
+
+S2_POB1
+
+v=c(2,3,4,5)
+
+for(y in v){
+        G = DT %>%
+                filter(level==y) %>% 
+                filter(action=="action.game_start" | action=="action.success" ) %>%
+                group_by(action) %>% 
+                summarise(n=n()) %>% 
+                select(-c(action))
+        
+        #G$action = NULL
+        
+        names(G)[1]=paste("L",y,sep="")
+        
+        G[[1]] = as.double(G[[1]])
+        G = rbind(G,round(as.double(G[2,1]/G[1,1]),2))
+        
+        S2_POB1 <- cbind(S2_POB1,G)
+        
+}
+
+kable(S2_POB1)
+
+
+```
+
+Asi que la probabilidad, según los datos que tenemos, de conseguir superar cada nivel (separadamente) está en torno al 60% y decreciente, el cual es un valor bastante a favor de poder considerar el juego como asequible, aunque dificil, como vemos en el inicio, pero lo compararemos al final con el balance de probabilidades de fallo:
+
+```{r}
+G=S2_POB1[3,]
+G= G[,-c(1)]
+G=as.data.frame(as.double(G))
+G=cbind(a=c("L1","L2","L3","L4","L5"),G)
+names(G)[2]="b"
+
+#G=data.frame(a=c("L1","L2","L3","L4","L5"),b=c(0.61,0.47,0.41,0.34,0.65))
+
+ggplot(G,aes(a,b))+geom_col()
+```
+Se observa un decrecimiento en las probabilidades de que un jugador pase de un nivel a otro conforme se va subiendo de nivel, excepto de nivel 4 a 5, que dicha probabilidad aumenta, Lo que sugiere y confirma una observacion hecha anteriormente, y es que se puede observar usalto de éxito por nivel buena llegados a los niveles finales. aunque la pregunta es, debido a qué?
+
+Hacemos lo mismo pero con la probabilidad de perder (action.fail) respecto a los que comienzan:
+
+```{r}
+x=1
+
+S2_POF1 = DT %>%
+        filter(level==x) %>% 
+        filter(action=="action.game_start" | action=="action.fail" ) %>%
+        group_by(action) %>% 
+        summarise(n=n())
+S2_POF1       
+names(S2_POF1)[x+1]=paste("L",x,sep="")
+
+S2_POF1$action = as.character(S2_POF1$action)
+S2_POF1[[x+1]] = as.double(S2_POF1[[x+1]])
+S2_POF1 = rbind(S2_POF1,c("%",round(as.double(S2_POF1[1,x+1]/S2_POF1[2,x+1]),2)))
+S2_POF1[[x+1]] = as.double(S2_POF1[[x+1]])
+
+S2_POF1
+
+#-----
+v=c(2,3,4,5)
+
+for(y in v){
+        H = DT %>%
+                filter(level==y) %>% 
+                filter(action=="action.game_start" | action=="action.fail" ) %>%
+                group_by(action) %>% 
+                summarise(n=n()) %>% 
+                select(-c(action))
+        
+        #G$action = NULL
+        
+        names(H)[1]=paste("L",y,sep="")
+        
+        H[[1]] = as.double(H[[1]])
+        H = rbind(H,round(as.double(H[1,1]/H[2,1]),2))
+        
+        S2_POF1 <- cbind(S2_POF1,H)
+        
+}
+
+kable(S2_POF1)
+```
+
+
+```{r}
+H=S2_POF1[3,]
+H= H[,-c(1)]
+H=as.data.frame(as.double(H))
+H=cbind(a=c("L1","L2","L3","L4","L5"),H)
+names(H)[2]="b"
+
+##----
+
+P=rbind(G,H)
+C=c(rep("S",5),rep("F",5))
+P=cbind(P,C)
+
+kable(P)
+
+
+ggplot()+geom_bar(data=P,aes(x=a,y=b,fill=C),stat='identity',position='dodge')
+
+Y=cbind(G,H)
+```
+En el histograma podemos observar que la probabilidad de pasar de tener éxito respecto a perder es, es general, mayor, acentuadamente más en los extremos.
+
+
+```{r}
+U= H[,-c(1)]
+kable(U)
+
+Y=cbind(G,U)
+
+Y = Y %>% mutate("DIV"=(b/U)-1) %>% select(-c("b","U"))
+
+kable(Y)
+
+ggplot(Y,aes(x=a,y=DIV)) + geom_point()
+
+```
+Con esta proporcion observamos que la relación exito / fallo se inclina en general por el éxito. Podríamos afirmar de que se trata de un juego asequible, si bien aún quedan variables por considerar
+
+########3## ¿Cómo ha sido el uso de powerups durante el evento?
+
+```{r}
+x=1
+
+S3_POB1 = DT %>%
+        filter(level==x) %>% 
+        filter(action=="action.game_start" | action=="action.use_powerup" ) %>%
+        group_by(action) %>% 
+        summarise(n=n())
+S3_POB1       
+names(S3_POB1)[x+1]=paste("L",x,sep="")
+
+S3_POB1$action = as.character(S3_POB1$action)
+S3_POB1[[x+1]] = as.double(S3_POB1[[x+1]])
+S3_POB1 = rbind(S3_POB1,c("%",round(as.double(S3_POB1[2,x+1]/S3_POB1[1,x+1]),2)))
+S3_POB1[[x+1]] = as.double(S3_POB1[[x+1]])
+
+#-----
+
+for(y in 2:5){
+        G = DT %>%
+                filter(level==y) %>% 
+                filter(action=="action.game_start" | action=="action.use_powerup" ) %>%
+                group_by(action) %>% 
+                summarise(n=n()) %>% 
+                select(-c(action))
+        
+        #G$action = NULL
+        
+        names(G)[1]=paste("L",y,sep="")
+        
+        G[[1]] = as.double(G[[1]])
+        G = rbind(G,round(as.double(G[2,1]/G[1,1]),2))
+        
+        S3_POB1 <- cbind(S3_POB1,G)
+        
+}
+
+kable(S3_POB1)
+
+```
+
+```{r}
+G=S3_POB1[3,]
+G= G[,-c(1)]
+G=as.data.frame(as.double(G))
+G=cbind(a=c("L1","L2","L3","L4","L5"),G)
+names(G)[2]="b"
+
+#G=data.frame(a=c("L1","L2","L3","L4","L5"),b=c(0.61,0.47,0.41,0.34,0.65))
+G=data.table(G)
+ggplot(G,aes(a,b))+geom_col()
+
+```
+El uso de power-ups aumenta exponencialmente conforme subimos de nivel. Es lógico pensar que se usen más conforme se lleguen a niveles más lejanos, pero la meteórica subida en el nivel 5 sugiere que  superar el mismo y por tanto el evento final se vuelve harto complicado.
+
+#######4## Realiza un análisis con los datos actuales y ofrece una recomendación al equipo de cara a diseñar nuevos niveles de eventos.
+###############
+
+Con una visual completa de los jugadores que han comenzado la partida, ganado en cada nivel, y el uso de powerups, vamos llegando a las conclusiones siguientes:
+
+
+
+```{r}
+S4_POB = DT %>% group_by(level) %>% 
+        filter(action=="action.game_start" | action=="action.success" | action=="action.use_powerup" | action=="action.fail") %>% 
+        mutate(Start=ifelse(action=="action.game_start",1,0),Success=ifelse(action=="action.success",1,0),Fail=ifelse(action=="action.fail",1,0),Powerup=ifelse(action=="action.use_powerup",1,0)) %>%
+        summarise(Start=sum(Start),Success=sum(Success),Fail=sum(Fail),Powerup=sum(Powerup),Psucc=round(sum(Success)/sum(Start),2),Ppwu=round(sum(Powerup)/sum(Start),2)) 
+
+S4_POB=as.data.table(S4_POB)
+
+kable(S4_POB)
+
+###
+
+x=1
+
+for(x in 1:5){
+        
+        S4_Cpwu = DT %>% filter(level==x) %>%
+                group_by(user_id) %>%
+                mutate(Success=ifelse(action=="action.success",1,0),Powerup=ifelse(action=="action.use_powerup",1,0)) %>%
+                summarise(Success=sum(Success),Powerup=sum(Powerup),Ambos=ifelse(Success>=1 & Powerup>=1,TRUE,FALSE)) %>%
+                filter(Ambos==TRUE) %>%
+                summarise(Cpwu=n())
+        
+        if(x==1){
+                
+                S4_POB2 = c(level=x,S4_Cpwu)
+                       
+        } else{
+                
+                S4_POB2 = rbind(S4_POB2,c(level=x,S4_Cpwu))
+        }
+        
+}
+
+S4_POB2 = as.data.table(S4_POB2)
+
+```
+
+Así obtenemos una tabla por nivel en el que hemos filtrado la cantidad de jugadores que habiendo ganado ese nivel, habían usado PowerUps
+Por ultimo unimos estos resultados con la tabla generada anteriormente, y obtenemos la siguiente:
+
+```{r}
+S4_POB5 = cbind(S4_POB,S4_POB2[,-1])
+S4_POB5$Cpwu = as.double(S4_POB5$Cpwu)
+setcolorder(S4_POB5,c("level", "Start", "Success", "Fail", "Powerup", "Cpwu", "Psucc", "Ppwu"))
+
+S4_POB5 = S4_POB5 %>% mutate(PSpwu=round((Cpwu/Start),2))
+
+kable(S4_POB5)
+```
+
+
+De manera que ahora, ante la pregunta de: ¿Qué probabilidad hay de un usuario que que suba de nivel, lo haya hecho usando un powerup? Esto es, en términos estadísticos, la probabilidad condicionada de Uso Powerups / Éxito --> P(Pwup | Psucc) = P(Pwup ∩ Psucc)/P(succ), Según nuestra matriz de resultados: P(Pwup ∩ Psucc) = PSpwu
+
+```{r}
+S4_POB5 = S4_POB5 %>% mutate(`P(P|S)`=round((PSpwu/Psucc),2))
+S4_POB5
+
+ggplot(S4_POB5,aes(level,`P(P|S)`))+geom_col()
+```
+
+En definitiva, el videojuego es de dificultad media-alta, posee un estilo contrario a videojuegos como BloodBorne (From Software), por citar un ejemplo, del estilo «riesgo-versus-recompensa» donde el atractivo y su filosofía reside en una altísima dificultad en los inicios, provocando que el jugador las pase canutas en los primeros niveles teniendo que repetirlo decenas de veces hasta que adquiere una habilidad que le permite crecer rápidamente en niveles posteriores, generando una sensación de control y reconfortable conforme se desarrolla el juego
+
+En este caso, el atractivo reside en que es muy accesible al principio, poseyendo un ratio superior al 60% de éxito respecto a la cantidad de partidas comenzadas Y aumentando su dificultad con una baja dispersión durante los niveles intermedios, tornándose muy complicado en los últimos niveles, y una dependencia casi total (95%) del uso de los powerups para conseguir terminar el evento (5 nivel),powerups que se presume, se van consiguiendo y acumulando durante los niveles intermedios donde la variabilidad de los resultados es baja, como ya se ha citado y observado.
+
+
+#############Aquí hago una propuesta de cómo calcular KPI de retencion a días, basandome en el actual Dataset
+```{r}
+
+ET = DT %>% filter(action=="action.game_start",level==1) %>% 
+        mutate(DAY=day(client_time))
+summary(ET)
+
+ET = DT %>% filter(action=="action.game_start",level==1) %>% 
+        mutate(DAY=day(client_time)) %>% group_by(user_id)%>% 
+        mutate(D1=ifelse(DAY==5,1,0),D2=ifelse(DAY==6,1,0),
+               D3=ifelse(DAY==6,1,0),D4=ifelse(DAY==6,1,0)) %>%
+        summarise(D1=ifelse(sum(D1)>=1,1,0),
+                  D2=ifelse(sum(D2)>=1,1,0),
+                  D3=ifelse(sum(D3)>=1,1,0),
+                  D4=ifelse(sum(D4)>=1,1,0)) %>% 
+        mutate(RT1=ifelse((D1+D2+D3+D4)>1,1,0),RT2=ifelse((D1+D2+D3+D4)>2,1,0),RT3=ifelse((D1+D2+D3+D4)>3,1,0)) %>%
+        select(user_id,RT1,RT2,RT3)
+      
+
+ET2 = ET %>% summarise(RTT1=sum(RT1)/n(),RTT2=sum(RT2)/n(),RTT3=sum(RT3)/n())
+
+kable(ET2)
+```
+
+Con esto obtenemos un mapa completo por usuario con retenciones a día 1, 2 y 3, que son el máximo de días de los que disponemos en nuestro muestreo Se comprueba que la tasa de retencion a día 1 es superior al 50%, también al día 2, y finalmente cae en el día 3 al 25%
+
+```{r}
+ET = DT %>% filter(action=="action.game_start") %>% 
+        mutate(DAY=day(client_time)) %>% 
+        group_by(user_id)%>% 
+        mutate(D1=ifelse(DAY==5,1,0),D2=ifelse(DAY==6,1,0),
+               D3=ifelse(DAY==6,1,0),D4=ifelse(DAY==6,1,0)) %>%
+        summarise(D1=ifelse(sum(D1)>=1,1,0),
+                  D2=ifelse(sum(D2)>=1,1,0),
+                  D3=ifelse(sum(D3)>=1,1,0),
+                  D4=ifelse(sum(D4)>=1,1,0)) %>% 
+        mutate(RT1=ifelse((D1+D2+D3+D4)>1,1,0),RT2=ifelse((D1+D2+D3+D4)>2,1,0),RT3=ifelse((D1+D2+D3+D4)>3,1,0)) %>%
+        select(user_id,RT1,RT2,RT3)
+
+ET %>% summarise(RTT1=sum(RT1)/n(),RTT2=sum(RT2)/n(),RTT3=sum(RT3)/n())
+
+```
+
+################5## ¿Qué analisis realizarias si tuvieras acceso a datos adicionales?
+###############
+
+Con más datos haría lo siguiente:
+        
+- Establecería perfiles de jugadores, con objeto de categorizar aquellos que no sólo participan más (consumen más), si no aquellos, según parámetros definidos
+tienen perfiles de ganador y porqué, y finalmente cruzar esos datos para entonces obtener perfiles de juego. Obtendría datos de los perfiles de los jugadores:
+         - Obtener datos de consumo como cantidad de consumo de televisión, gustos
+         - Perfiles sociales, edades, estado civil, lugar de residencia...
+ - Obtener perfiles de juego, con mayor ratio de cesión de powerups u otras variables de terreno que favorezcan la "ganabilidad", para maximizar
+ la necesidad en el jugador de continuar hasta el final (KPI de retención a largo plazo), una vez comenzado el juego.
+         - Establecer tipos de niveles, juegos, densidad de powerups, nivel de inteligencia artificial o cantidad de enemigos
+         - Concretamente quería datos por ejemplo de cantidad de enemigos o goals obtenidos durante la partida, cantidad de powerups obtenidos, para compararlos con los usados... etc.
+ - Definiría, en definitiva, KPI, indicadores, variables de "terreno" que permitan al analista abarcar un abanico no demasiado amplio de parámetros que le permitan establecer una serie de patrones
+ que sean directamente proporcionales a sensación de autorrealiación y por tanto de necesidad de continuar (retención), y de ese modo jugar con dichas variables para enganchar
+ al usuario, para crear la adicción necesaria, sin que resulte jartible, sin que dejes de pensar en él
+
+```{r}
+````
+
+
+################################
+########## Test A/B ############
+################################
+
+```{r}
+
+GT <- read.csv("ab_test.csv")
+GT=as.data.table(GT)
+kable(head(GT))
+
+summary(filter(GT,ab_group=="A"))
+summary(filter(GT,ab_group=="B"))
+
+GT_1A = GT %>% group_by(ab_group) %>% distinct(user_id, keep_all=TRUE)  %>% summarise(USR=n())
+GT_1B = GT %>% group_by(ab_group)%>% summarise(STR=sum(total_game_starts),REN=sum(total_revenue),PUR=sum(total_product))
+GT_1 = as.data.table(cbind(GT_1B,GT_1A[,2]))
+GT_1 = GT_1 %>% mutate(`S/U`=STR/USR,`R/U`=REN/USR,`P/U`=PUR/USR)
+GT_1 = adorn_totals(GT_1,where="row")
+
+sum(GT_1[,2])
+for(x in 6:8){
+        GT_1[3,x]=((GT_1[2,x]-GT_1[1,x])/GT_1[1,x])*100
+}
+
+kable(GT_1)
+```
+Una primera métrica sería establecer indicadores de densidad, o peso específico, para comprobar qué ratio de comienzos de partida, que los llamamos S/U (cantidad de partidas comenzadas por cantidad de usuarios que han participado) y R/U // P/U con cantidad de dinero inyectado y realizadas por usuario. Después compruebo en estas variables el crecimiento o descenso que ha sufrido en cantidades cuando se ha pasado al grado de dificultad B, y efectivamente han aumentado, aun que no en un porcentaje muy alto (en torno al 3,3%)
+
+```{r}
+
+GT_2A = GT %>% group_by(ab_group) %>% distinct(user_id, keep_all=TRUE)  %>% summarise(USR=n())
+GT_2B = GT %>% group_by(ab_group)%>% summarise(STR=sum(total_game_starts),PWU=sum(total_pu_uses),REN=sum(total_revenue),PUR=sum(total_product))
+GT_2 = as.data.table(cbind(GT_2B,GT_2A[,2]))
+GT_2 = GT_2 %>% mutate(`S/T`=STR/sum(STR),`PU/T`=PWU/sum(PWU),`R/T`=REN/sum(REN),`P/T`=PUR/sum(PUR))
+GT_2
+
+###
+
+GT_3= GT %>% group_by(ab_group) %>% summarise("CORpu-ren"=cor(total_pu_uses,total_revenue),"CORpu-prd"=cor(total_pu_uses,total_product),"CORpu-str"=cor(total_pu_uses,total_game_starts),"CORstr-ren"=cor(total_game_starts,total_revenue),"CORstr-prod"=cor(total_game_starts,total_product))
+
+GT_3 = adorn_totals(GT_3,where="row")
+for(x in 2:5){
+        GT_3[3,x]=((GT_3[2,x]-GT_3[1,x])/GT_3[1,x])*100
+}
+
+```
+Y aquí
+```{r}
+
+GT_3
+median(as.double(GT_3[3,2:5]))
+mean(as.double(GT_3[3,2:5]))
+```
+Y aquí
+```{r}
+
+GT %>% filter(ab_group=="A") %>% ggplot(aes(x=total_pu_uses,y=total_game_starts)) + geom_point()
+
+```
+En un mapa de correlaciones observamos que se ha reducido la correlación entre las diferentes variables (Start,PU,REN,PROD) 
+Al pasar al grado de dificultad B que no es beneficiosa, puesto que se diluye un patrón reconocible.
+
+Esto nos puede situar en una aparente "incogruencia" ya que se presupone que debería reforzarse las correlaciones. Al ver que existe un crecimiento objetivo de los KPI  relativos  al aumento de compras de productos y dinero gastados así como uso de powerups, sin embargo se ha reducido la relación entre estas variables. Se intentará solventar esto clasificando por tipo de jugador
+
+```{r}
+summary(GT)
+
+GT = GT %>% rename(TS=total_game_starts,PU=total_pu_uses,RE=total_revenue,PR=total_product,AB=ab_group)
+GT_4 = GT %>% group_by(AB) %>% mutate(T1=ifelse(TS<max(TS)/6,1,0),T2=ifelse(TS %between% c(max(TS)/6, max(TS)/5),1,0),T3=ifelse(TS %between% c(max(TS)/5, max(TS)/4),1,0),T4=ifelse(TS %between% c(max(TS)/4, max(TS)/3),1,0),T5=ifelse(TS %between% c(max(TS)/3, max(TS)/1.5),1,0),T6=ifelse(TS>max(TS)/1.5,1,0)) %>% summarise(T1=sum(T1),T2=sum(T2),T3=sum(T3),T4=sum(T4),T5=sum(T5),T6=sum(T6))
+
+GT_5 = GT %>% group_by(AB) %>% mutate(T1=ifelse(PU<max(PU)/6,1,0),T2=ifelse(PU %between% c(max(PU)/6, max(PU)/5),1,0),T3=ifelse(PU %between% c(max(PU)/5, max(PU)/4),1,0),T4=ifelse(PU %between% c(max(PU)/4, max(PU)/3),1,0),T5=ifelse(PU %between% c(max(PU)/3, max(PU)/1.5),1,0),T6=ifelse(PU>max(PU)/1.5,1,0)) %>% summarise(T1=sum(T1),T2=sum(T2),T3=sum(T3),T4=sum(T4),T5=sum(T5),T6=sum(T6))
+
+GT_6 = GT %>% group_by(AB) %>% mutate(T1=ifelse(PR<mean(PR[PR!=0])*10/6,1,0),T2=ifelse(PR %between% c(mean(PR[PR!=0])*10/6, mean(PR[PR!=0])*10/5),1,0),T3=ifelse(PR %between% c(mean(PR[PR!=0])*10/5, mean(PR[PR!=0])*10/4),1,0),T4=ifelse(PR %between% c(mean(PR[PR!=0])*10/4, mean(PR[PR!=0])*10/3),1,0),T5=ifelse(PR %between% c(mean(PR[PR!=0])*10/3, mean(PR[PR!=0])*10/1.5),1,0),T6=ifelse(PR>mean(PR[PR!=0])*10/1.5,1,0)) %>% summarise(T1=sum(T1),T2=sum(T2),T3=sum(T3),T4=sum(T4),T5=sum(T5),T6=sum(T6))
+```
+
+```{r}
+kable(GT_4)
+```
+
+```{r}
+kable(GT_5)
+```
+
+```{r}
+kable(GT_6)
+
+```
+
+```{r}
+##Y observamos los sumarios por grupo:
+kable(summary(filter(GT,AB=="A")))
+```
+
+```{r}
+kable(summary(filter(GT,AB=="B")))
+
+```
+
+```{r}
+GT %>% group_by(AB) %>% summarise(PU = max(PU),PR = (mean(PR)*10)) %>% rbind(c())
+```
+
+Pero no se obtiene gran cosa más. Con los datos proporcionados podemos concluir que haber pasado al nivel de dificultad "B" ha tenido mejoras, El consumo de los PU y PR ha aumentado como se comentaba antes, y observamos en los sumarios que el valor máximo de consumos en determinados  jugadores se ha incrementado al doble en PU, y en más de un 40% en compras, lo que sugiere que ha vuelto más "ambicioso" al jugador.
+
+```{r}
+
+```
+
+################################
+########## USUARIOS DIA ########
+################################
+
+
+¿Cúantos usuarios harían falta para poder estimar este KPI con un nivel de confianza al 90% y con un tamaño del intervalo de confianza de 5%?
+
+La respuesta a esta pregunta es sencilla, aunque hacemos algunas suposiciones, junto con las condiciones de contorno:
+
+ - Se supone una población universal infinita, dado la capacidad de muestreo de la que se dispone
+ - Se supone una probabilidad de retención a día uno del 50% (40-60%)
+ - Nivel de confianza del 90%
+ - Error máximo asumido o intervalo de confianza del 5%
+ - Se asume que su distribución es atribuible a una Distribucion normal N(0,1)
+
+
+Y usando el principio del Teorema central, y simplificando, aplicamos la siguiente fórmula:
+
+        n = (Z^2·p(1-p))/e^2
+
+        Donde:
+                - Z = Zalpha (para intervalo de confianza de 95%  ~1,62 interpolando)
+                - p = probabilidad de éxito en la retencion a día 1
+                - e = intervalo de confianza
+```{r}        
+Nsamples1 = ((1.62^2)*0.5*(0.5))/(0.05^2)
+Nsamples1
+
+Nsamples2=sample.size.prop(e=0.05, P=0.5, N=Inf, level=0.9)
+Nsamples2
+
+```
+La muestra total para cumplir con el objetivo de confianza propuesto es de 271 muestras. Como se puede ver, calculado manualmente se obtiene una cifra parecida, en torno a las 262 muestras.
+
+
