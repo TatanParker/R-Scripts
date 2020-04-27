@@ -1,0 +1,510 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdftitle={TAREA M3},
+            pdfauthor={TATAN RUFINO},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\providecommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+
+  \title{TAREA M3}
+    \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+    \author{TATAN RUFINO}
+    \preauthor{\centering\large\emph}
+  \postauthor{\par}
+      \predate{\centering\large\emph}
+  \postdate{\par}
+    \date{10 de mayo de 2019}
+
+
+\begin{document}
+\maketitle
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  INTRODUCCIÓN
+\end{enumerate}
+
+Con este proyecto trataré de hacer un modesto análisis de datos sobre la
+base de datos student proporcionada por la comunidad internacional y
+sobre la que se centra la tarea en la que nos encontramos. Me he ayudado
+de la comunidad internacional, que ofrece todo tipo de ayuda en análisis
+para bases de datos conocidas, razón por la cual usaré funciones y
+metologías no mostradas hasta el momento
+
+Este proyecto tiene como objetivo descubrir la influencia de diversas
+variables y parámetros en las notas de un estudiante de secundaria. En
+este caso nos centraremos en el estudiante de matemáticas, las
+observaciones fueron recabadas haciendo la encuesta de un total de 395
+estudiantes, que viene dado por el dataset studentMat.csv.
+
+El dataset cuenta con 33 variables diferentes, el cual será sometido a
+la siguiente metodología de acciones: - INICIO: Declaración de
+librerías, importación de tablas, primeras visualizaciones - Filtrado de
+dataset y definición de variables clave - Análisis exploratorio y
+visualizaciones - Comentarios - Aplicación de algoritmos de Machine
+learning - Algoritmo de Arbol de decisiones - Algoritmo de Regresión
+simple - Evaluación
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{1}
+\tightlist
+\item
+  INICIO
+\end{enumerate}
+
+temp \textless{}- tempfile()
+download.file(``\url{http://archive.ics.uci.edu/ml/machine-learning-databases/00356/student.zip}'',temp,
+mode=``wb'') unzip(temp, ``student-mat.csv'') ST \textless{}-
+read.table(``student-mat.csv'',sep= ``;'', header= T) unlink(temp)
+
+ST{[},1:5{]} \%\textgreater{}\% head() \%\textgreater{}\% kable()
+
+summary(head(ST{[},1:5{]})
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{2}
+\tightlist
+\item
+  FILTRADO Y DEFINICION DE VARIABLES CLAVE
+\end{enumerate}
+
+temp \textless{}- tempfile()
+download.file(``\url{http://archive.ics.uci.edu/ml/machine-learning-databases/00356/student.zip}'',temp,
+mode=``wb'') unzip(temp, ``student-mat.csv'') ST \textless{}-
+read.table(``student-mat.csv'',sep= ``;'', header= T) unlink(temp)
+
+\begin{verbatim}
+
+#Primeras visualizaciones
+\end{verbatim}
+
+data{[},1:5{]} \%\textgreater{}\% head() \%\textgreater{}\% kable()
+summary(ST) names(ST)
+
+\section{Compruebo si hay NA}\label{compruebo-si-hay-na}
+
+ST \%\textgreater{}\% is.na() \%\textgreater{}\% all()
+
+\section{Consulto la codificacion de la DT de la pagina de
+google}\label{consulto-la-codificacion-de-la-dt-de-la-pagina-de-google}
+
+COL\_LIST \textless{}-
+gsheet2tbl(`\url{https://docs.google.com/spreadsheets/d/1mDsF0aMNgODx7063l2mxV1_zP32fAe_P55SBmtG72G8}')
+kable(COL\_LIST) kable(COL\_LIST{[},1:3{]})
+
+\section{Escogemos 18 variables como
+predictores}\label{escogemos-18-variables-como-predictores}
+
+\subsubsection{7 variables categóricas}\label{variables-categoricas}
+
+\subsubsection{11 variables numericas}\label{variables-numericas}
+
+\section{Y finalmente 3 variables dependientes y susceptibles de
+predicción, correspondientes a las
+notas}\label{y-finalmente-3-variables-dependientes-y-susceptibles-de-prediccion-correspondientes-a-las-notas}
+
+\section{\texorpdfstring{En base a lo que observo en nuestro ST, y dadas
+las características de las variables actuales, eliminaré diversas
+variables entre las que se encuentran ``famsize'' ``reason'' o
+``guardian'' o ``school'', ya que serán irrelevantes en nuestro análisis
+con
+select()}{En base a lo que observo en nuestro ST, y dadas las características de las variables actuales, eliminaré diversas variables entre las que se encuentran famsize reason o guardian o school, ya que serán irrelevantes en nuestro análisis con select()}}\label{en-base-a-lo-que-observo-en-nuestro-st-y-dadas-las-caracteristicas-de-las-variables-actuales-eliminare-diversas-variables-entre-las-que-se-encuentran-famsize-reason-o-guardian-o-school-ya-que-seran-irrelevantes-en-nuestro-analisis-con-select}
+
+ST \textless{}- ST
+\%\textgreater{}\%as\_tibble()\%\textgreater{}\%select(sex, age,
+address,Pstatus, Medu, Fedu, Mjob,
+Fjob,studytime,traveltime,failures,higher,internet, goout,
+Dalc,Walc,health, absences,G1,G2,G3) dim(ST)
+
+ST \%\textgreater{}\% glimpse() ST \%\textgreater{}\% summary()
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{3}
+\tightlist
+\item
+  ANÁLISIS EXPLORATORIO DE DATOS DIVERSO
+\end{enumerate}
+
+\section{ANALISIS EXPLORATORIO DE
+DATOS}\label{analisis-exploratorio-de-datos}
+
+\section{Analizaremos los siguientes
+indicadores}\label{analizaremos-los-siguientes-indicadores}
+
+\section{1. Según género}\label{segun-genero}
+
+\section{2. Consumo de alcohol (W/D)}\label{consumo-de-alcohol-wd}
+
+\section{3. Costumbres, objetivos y origen del
+alumno}\label{costumbres-objetivos-y-origen-del-alumno}
+
+\section{4. Salud y asistencia a
+clase}\label{salud-y-asistencia-a-clase}
+
+\section{5. Acceso a internet}\label{acceso-a-internet}
+
+\section{6. Relación asistencia a clase con las
+notas}\label{relacion-asistencia-a-clase-con-las-notas}
+
+\subsubsection{Según Genero}\label{segun-genero}
+
+(ANA\_1\textless{}-ST\%\textgreater{}\%
+mutate(pass=ifelse(G3\textgreater{}=10,1,0), fail=
+ifelse(G3\textless{}10,1,0))\%\textgreater{}\%
+filter(sex==``F''\textbar{}sex==``M'')\%\textgreater{}\%
+group\_by(sex)\%\textgreater{}\% summarise(Pass=sum(pass),
+Fail=sum(fail)))
+
+ANA\_1\%\textgreater{}\% ggplot(aes(x=sex,y=Fail))+
+geom\_bar(stat=``identity'') ANA\_1
+
+\subsubsection{Observamos que hay diferencias notables entre mujeres y
+hombres}\label{observamos-que-hay-diferencias-notables-entre-mujeres-y-hombres}
+
+\section{2. Consumo de alcohol}\label{consumo-de-alcohol}
+
+ANA\_2a \textless{}- ST\%\textgreater{}\%
+group\_by(Walc)\%\textgreater{}\% aggregate(G3\textasciitilde{}Walc,
+data=., mean)\%\textgreater{}\% arrange(desc(G3)) ANA\_2a
+
+ANA\_2b \textless{}- ST\%\textgreater{}\%
+group\_by(Dalc)\%\textgreater{}\% aggregate(G3\textasciitilde{}Dalc,
+data=., mean)\%\textgreater{}\% arrange(desc(G3)) ANA\_2b
+
+\section{Vemos que disminuye el promedio a medida que aumenta el consumo
+de alcohol entre semana, pero no hay un patron para fin de
+semana}\label{vemos-que-disminuye-el-promedio-a-medida-que-aumenta-el-consumo-de-alcohol-entre-semana-pero-no-hay-un-patron-para-fin-de-semana}
+
+\section{Cruce de datos para visualizacion de aspectos que relacionen
+datos relacionados con el género y el consumo de
+alcohol}\label{cruce-de-datos-para-visualizacion-de-aspectos-que-relacionen-datos-relacionados-con-el-genero-y-el-consumo-de-alcohol}
+
+DUM \textless{}- dummyVars(``\textasciitilde{}.'', data=ST) GEN\_ALC
+\textless{}- data.frame(predict(DUM, newdata=ST)) correl1
+\textless{}-cor(GEN\_ALC{[},c(``G3'',``sex.F'',``sex.M'',``Walc'',``Dalc''){]})
+source(``\url{https://raw.githubusercontent.com/briatte/ggcorr/master/ggcorr.R}'')
+correl1 \%\textgreater{}\% ggcorr(label = TRUE)+ ggtitle(``Correlaciones
+entre genero, consumo de alcohol y las notas'')
+
+\section{Pasamos}\label{pasamos}
+
+ST\(Dalc <- as.factor(ST\)Dalc) ST\(Walc <- as.factor(ST\)Walc)
+P1a\textless{}-ST \%\textgreater{}\% ggplot(aes(x=Dalc, y=G3, fill=
+Dalc))+ geom\_boxplot()+ coord\_flip()+ xlab(``Consumo de alcohol entre
+semana'')+ ylab(``Notas'')+ facet\_grid(\textasciitilde{}sex)
+P1b\textless{}-ST \%\textgreater{}\% ggplot(aes(x=Walc, y=G3, fill=
+Walc))+ geom\_boxplot()+ coord\_flip()+ xlab(``Consumo de alcohol
+entresemana'')+ ylab(``Notas'')+ facet\_grid(\textasciitilde{}sex)
+grid.arrange(P1a,P1b,ncol=2)
+
+\section{Básicamente podemos predecir que el consumo de alcohol tiene un
+impacto mucho mayor que el género en las
+notas}\label{basicamente-podemos-predecir-que-el-consumo-de-alcohol-tiene-un-impacto-mucho-mayor-que-el-genero-en-las-notas}
+
+\section{3. Costumbres, objetivos y origen del
+alumno}\label{costumbres-objetivos-y-origen-del-alumno-1}
+
+class(ST\(goout) ST\)goout \textless{}- as.factor(ST\$goout)
+\#Convertimos a factor para que me acepte el algoritmo ANA\_3
+\textless{}- ST\%\textgreater{}\% group\_by(goout)\%\textgreater{}\%
+summarise(Avr= mean(G3,na.rm=TRUE))\%\textgreater{}\% arrange(desc(Avr))
+ANA\_3
+
+\section{Vemos que hay un decrecimiento en las notas en cuanto que el
+alumno supera el factor de salida de
+4}\label{vemos-que-hay-un-decrecimiento-en-las-notas-en-cuanto-que-el-alumno-supera-el-factor-de-salida-de-4}
+
+P2a\textless{}-ST \%\textgreater{}\%
+group\_by(address)\%\textgreater{}\% ggplot(aes(x=factor(Dalc), y= G3))+
+geom\_jitter(alpha=0.6)+ scale\_x\_discrete(``Alcohol entresemana'')+
+scale\_y\_continuous(``Notas'')+ facet\_grid(\textasciitilde{}address)
+P2b\textless{}-ST \%\textgreater{}\%
+group\_by(address)\%\textgreater{}\% ggplot(aes(x=factor(Walc), y= G3))+
+geom\_jitter(alpha=0.6)+ scale\_x\_discrete(``Alcohol en fin de
+semana'')+ scale\_y\_continuous(``Notas'')+
+facet\_grid(\textasciitilde{}address) grid.arrange(P2a,P2b,ncol=2)
+
+\section{Otro ejemplo paradigmático de la relacion del decrecimiento de
+notas respecto al consumo de alcohol. Se observa que se bebe menos en
+las zonas
+rurales}\label{otro-ejemplo-paradigmatico-de-la-relacion-del-decrecimiento-de-notas-respecto-al-consumo-de-alcohol.-se-observa-que-se-bebe-menos-en-las-zonas-rurales}
+
+ST\%\textgreater{}\% ggplot(aes(x=higher, y=G3))+ geom\_boxplot()+
+facet\_grid(\textasciitilde{}sex)
+
+\section{Los alumnos que aspiran a mejor educacion, tienen mejores
+notas. Los hombres son mejores que las mujeres
+también}\label{los-alumnos-que-aspiran-a-mejor-educacion-tienen-mejores-notas.-los-hombres-son-mejores-que-las-mujeres-tambien}
+
+\section{4. Salud y asistencia a
+clase}\label{salud-y-asistencia-a-clase-1}
+
+ST\%\textgreater{}\% group\_by(sex)\%\textgreater{}\%
+ggplot(aes(x=factor(health), y=absences, color=sex))+
+geom\_smooth(aes(group=sex), method=``lm'', se=FALSE)
+
+\section{Este interesante gráfico nos muestra que existe una relación
+lineal decreciente entre la salud del alumno y las ausencias en
+clase}\label{este-interesante-grafico-nos-muestra-que-existe-una-relacion-lineal-decreciente-entre-la-salud-del-alumno-y-las-ausencias-en-clase}
+
+\section{Ademas de ser, de nuevo, las mujeres quienes faltan más clase,
+siendo sus ausencias menos dependientes con la
+salud}\label{ademas-de-ser-de-nuevo-las-mujeres-quienes-faltan-mas-clase-siendo-sus-ausencias-menos-dependientes-con-la-salud}
+
+\section{5. Acceso a internet}\label{acceso-a-internet-1}
+
+ST\%\textgreater{}\% group\_by(internet)\%\textgreater{}\%
+ggplot(aes(x=G3, fill=internet))+ geom\_density( alpha=0.8)
+
+\section{el uso de internet afecta a las notas, aunque no en
+exceso}\label{el-uso-de-internet-afecta-a-las-notas-aunque-no-en-exceso}
+
+\section{6. Relación asistencia a clase con las
+notas}\label{relacion-asistencia-a-clase-con-las-notas-1}
+
+P3 \textless{}- ggplot(ST, aes(absences, G3)) P3 + geom\_point() +
+geom\_smooth(method=``lm'', se=F) + labs(y=``G3'', x=``abcenses'',
+title=``Comparativa ausencias con notas'')
+
+ggplot(ST, aes(x=absences, y=G3)) + geom\_bar(stat=``identity'',
+width=.5, fill=``tomato3'') + labs(y=``G3'', x=``absences'',
+title=``Ausencias vs Notas'')
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{4}
+\tightlist
+\item
+  ANALISIS NO SUPERVISADO SEGÚN CLUSTERING CON ALGORITMO KMEANS
+\end{enumerate}
+
+CLUSTERING DE DATOS
+
+\subsubsection{CREAMOS ST\_MOD COMO REFERENCIA CON EL G3 REESCALADO DE
+1:10}\label{creamos-st_mod-como-referencia-con-el-g3-reescalado-de-110}
+
+ST\_MOD=ST ST\_MOD\(G3=as.integer(ST_MOD\)G3)
+
+ST\_MOD\(G3=rescale(ST_MOD\)G3,to=c(1,10))
+
+\subsubsection{convertimos a integer}\label{convertimos-a-integer}
+
+ST\_KM=
+ST{[}c(``age'',``Medu'',``Fedu'',``studytime'',``traveltime'',``failures'',``goout'',``Dalc'',``Walc'',``health'',``absences'',``G1'',``G2''){]}
+ST\_factors = ST\_KM \%\textgreater{}\% select\_if(is.factor)
+\%\textgreater{}\% colnames() ST\_KM{[},ST\_factors{]} =
+lapply(ST\_KM{[},ST\_factors{]}, as.integer)
+
+\#Limpiamos variables de valores dispersos \#abcenses
+plot(ST\_KM\(absences)  ST_KM\)absences\textless{}-
+floor(rescale(ifelse(ST\_KM\(absences>3*mean(ST_KM\)absences),
+3*mean(ST\_KM\(absences),ST_KM\)absences), ,to=c(1,5)))
+\#\#\#plot(ST\_KM\(absences)  #age  plot(ST_KM\)age)
+ST\_KM\(age<- floor(rescale(ifelse(ST_KM\)age\textgreater{}19,
+19,ST\_KM\(age),  ,to=c(1,5)))  plot(ST_KM\)age)
+
+\#\#Se reajusta todo el sistema a escala 1:5
+
+\section{\texorpdfstring{ST\_KM\(absences<- floor(rescale(ST_KM\)absences,to=c(1,5)))}{ST\_KMabsences\textless{}- floor(rescale(ST\_KMabsences,to=c(1,5)))}}\label{st_kmabsences--floorrescalest_kmabsencestoc15}
+
+ST\_KM{[}, c(1:13){]} \textless{}- lapply(ST\_KM{[}, c(1:13){]},
+function(x) rescale(x,to=c(1,5))) ST\_KM=floor(ST\_KM) ST\_factors =
+ST\_KM \%\textgreater{}\% select\_if(is.factor) \%\textgreater{}\%
+colnames() ST\_KM{[},ST\_factors{]} = lapply(ST\_KM{[},ST\_factors{]},
+as.integer)
+
+glimpse(ST\_KM) summary(ST\_KM)
+
+mydata \textless{}- ST\_KM wss \textless{}-
+(nrow(mydata)-1)*sum(apply(mydata,2,var)) for (i in 2:15) wss{[}i{]}
+\textless{}- sum(kmeans(mydata,centers=i)\$withinss)
+
+plot(1:15, wss, type=``b'', xlab=``Numero de Clusters'', ylab=``Sumas de
+cuadrados dentro de los grupos'', main=``Num de clusters óptimo según
+Elbow'', pch=20, cex=2)
+
+\subsection{se deciden 5 centros}\label{se-deciden-5-centros}
+
+KM=kmeans(ST\_KM,5) KM
+
+table(ST\_MOD\(G3, KM\)cluster)
+
+plot(ST\_KM\(age, col=KM\)cluster)
+
+plot(KM\(centers) radial.plot(KM\)centers{[}1,{]},
+labels=names(KM\$centers{[}1,{]}), rp.type=``s'', radial.lim=c(0,8),
+point.symbols=13, point.col=``red'', mar = c(2,1,5,2))
+
+plot(ST\_KM \%\textgreater{}\% select(age, absences), col =
+KM\(cluster) points(as.data.frame(KM\)centers) \%\textgreater{}\%
+select(age, absences), col = 1:3, pch = 8, cex = 2)
+
+ST\_FIN \textless{}- ST\_MOD \%\textgreater{}\% mutate(cluster\_id =
+KM\$cluster) kable(head(ST\_FIN))
+
+\section{Aunque es posible que haber normalizado los valores de las
+variables entre 1:5 puede que nos haya limitado
+la}\label{aunque-es-posible-que-haber-normalizado-los-valores-de-las-variables-entre-15-puede-que-nos-haya-limitado-la}
+
+\section{vision grafica de las dispersiones, en general vemos, tras un
+proceso iterativo en la busqueda de
+centros}\label{vision-grafica-de-las-dispersiones-en-general-vemos-tras-un-proceso-iterativo-en-la-busqueda-de-centros}
+
+\section{\texorpdfstring{Todo apunta a que aquellas variables como
+G1,G2,``studytime'', ``traveltime'' se encuentran en el grueso de
+valores máximos asociados a notas
+altas}{Todo apunta a que aquellas variables como G1,G2,studytime, traveltime se encuentran en el grueso de valores máximos asociados a notas altas}}\label{todo-apunta-a-que-aquellas-variables-como-g1g2studytime-traveltime-se-encuentran-en-el-grueso-de-valores-maximos-asociados-a-notas-altas}
+
+\section{\texorpdfstring{Y las variables de tipo Walc,Dalc,``goout''
+Tienen mayor influencia en el sentido inverso, y están asociados a la
+caida de
+notas.}{Y las variables de tipo Walc,Dalc,goout Tienen mayor influencia en el sentido inverso, y están asociados a la caida de notas.}}\label{y-las-variables-de-tipo-walcdalcgoout-tienen-mayor-influencia-en-el-sentido-inverso-y-estan-asociados-a-la-caida-de-notas.}
+
+\subsection{\texorpdfstring{Mis fuentes principales son el
+`table(ST\_MOD\(G3, KM\)cluster)' y el esquema de centros
+radial.}{Mis fuentes principales son el table(ST\_MODG3, KMcluster) y el esquema de centros radial.}}\label{mis-fuentes-principales-son-el-tablest_modg3-kmcluster-y-el-esquema-de-centros-radial.}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{5}
+\item
+  APLICACION DE ALGORITMOS PREDICTIVOS
+\item
+  ARBOL DE DECISIONES
+\end{enumerate}
+
+Usaremos el árbol de decisiones para este análisis predictivo debido a
+la simplicidad de la presentación de datos en nuestro Dataset, que nos
+permite hacer una rápida lectura y comparativa en torno a los resultados
+que arroje el algoritmo tras aplicarse.
+
+La mexcla de variables categóricas y numéricas hace más complicado usar
+la metodología de regresiones lineales, lo que nos lleva a elegir este
+método como el principal.
+
+Se utilizará el paquete Rpart, que es con el que hemos aprendido en la
+lección 3 y que parece encajar perfectamente con nuestro caso,
+utilizando todas las variables que hemos usado en el analisis
+
+library(caret) ST\_new\textless{}- ST\%\textgreater{}\%select(sex, age,
+address,Pstatus, Medu, Fedu, Mjob,
+Fjob,studytime,traveltime,failures,higher,internet, goout,
+Dalc,Walc,health, absences,G1, G2, G3) ARBOL \textless{}- rpart(G3
+\textasciitilde{} ., data = ST\_new, method = ``class'') PRIN
+\textless{}- varImp(ARBOL) rownames(PRIN){[}order(PRIN\$Overall,
+decreasing=TRUE){]}
+
+printcp(ARBOL)
+
+plotcp(ARBOL)
+
+\subsection{Encontramos que G1 y G2 examen son predictores clave
+seguidos por niveles de asistencia, consumo de alcohol y trabajos de los
+padres.}\label{encontramos-que-g1-y-g2-examen-son-predictores-clave-seguidos-por-niveles-de-asistencia-consumo-de-alcohol-y-trabajos-de-los-padres.}
+
+\section{\texorpdfstring{La lógica del árbol consiste en sólo utilizar
+``attendance, Fjob, G1 y G2'' como variables basadas en la correlación y
+la colinealidad entre algunas de las otras
+variables.}{La lógica del árbol consiste en sólo utilizar attendance, Fjob, G1 y G2 como variables basadas en la correlación y la colinealidad entre algunas de las otras variables.}}\label{la-logica-del-arbol-consiste-en-solo-utilizar-attendance-fjob-g1-y-g2-como-variables-basadas-en-la-correlacion-y-la-colinealidad-entre-algunas-de-las-otras-variables.}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{5}
+\tightlist
+\item
+  CONCLUSIONES
+\end{enumerate}
+
+El hecho de que muchas variables estén correlacionadas es directamente
+proporcional a la baja significancia o capacidad en las predicciones
+finales, ya que no consiguen destacarse como variables unicas.
+
+Respecto al análisis exploratorio según tecnicas de visualización o
+cruce de datos y aplicando clustering, se obtienen algunos resultados
+contradictorios, o quizás podría decirse que confirmatorios, como ocurre
+con el caso de la relación de ausencias, Alcohol entre y en fin de
+semana, o salidas,
+
+Así como variables que influyen menos en las notas finales y tienen una
+repercusión escasa
+
+Aun queda mucho por aprender en este fascinante campo. Con más tiempo y
+exhaustividad modelos supervisados y no supervisados podrían converger
+con satisfacción y mejorar la calidad de la certidumbre de los datos
+
+
+\end{document}
